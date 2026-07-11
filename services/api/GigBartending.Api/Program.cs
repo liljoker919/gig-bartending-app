@@ -51,6 +51,14 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.AddSingleton<TokenService>();
 var tokenService = new TokenService(builder.Configuration);
 
+// Refuse to start outside local development if JWT_SECRET is missing or still
+// the dev-only fallback - that fallback must never sign tokens for real traffic.
+if (!builder.Environment.IsDevelopment() && tokenService.Secret == TokenService.DevOnlyDefaultSecret)
+{
+    throw new InvalidOperationException(
+        "JWT_SECRET must be set to a unique value when ASPNETCORE_ENVIRONMENT is not Development.");
+}
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

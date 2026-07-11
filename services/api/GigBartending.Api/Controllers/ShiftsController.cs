@@ -70,6 +70,12 @@ public class ShiftsController : ControllerBase
     [Authorize(Roles = "Venue")]
     public async Task<IActionResult> CreateShift([FromBody] CreateShiftDto dto)
     {
+        var errors = ShiftValidation.Validate(dto.ShiftDate, dto.StartTime, dto.EndTime, dto.HourlyRate);
+        if (errors.Count > 0)
+        {
+            return BadRequest(new { errors });
+        }
+
         var shift = new Shift
         {
             VenueId = CurrentUserId,
@@ -112,12 +118,23 @@ public class ShiftsController : ControllerBase
             return Forbid();
         }
 
+        var newShiftDate = dto.ShiftDate ?? shift.ShiftDate;
+        var newStartTime = dto.StartTime ?? shift.StartTime;
+        var newEndTime = dto.EndTime ?? shift.EndTime;
+        var newHourlyRate = dto.HourlyRate ?? shift.HourlyRate;
+
+        var errors = ShiftValidation.Validate(newShiftDate, newStartTime, newEndTime, newHourlyRate);
+        if (errors.Count > 0)
+        {
+            return BadRequest(new { errors });
+        }
+
         if (dto.Title != null) shift.Title = dto.Title;
         if (dto.Description != null) shift.Description = dto.Description;
-        if (dto.ShiftDate.HasValue) shift.ShiftDate = dto.ShiftDate.Value;
-        if (dto.StartTime.HasValue) shift.StartTime = dto.StartTime.Value;
-        if (dto.EndTime.HasValue) shift.EndTime = dto.EndTime.Value;
-        if (dto.HourlyRate.HasValue) shift.HourlyRate = dto.HourlyRate.Value;
+        shift.ShiftDate = newShiftDate;
+        shift.StartTime = newStartTime;
+        shift.EndTime = newEndTime;
+        shift.HourlyRate = newHourlyRate;
         if (dto.Location != null) shift.Location = dto.Location;
         shift.UpdatedAt = DateTime.UtcNow;
 

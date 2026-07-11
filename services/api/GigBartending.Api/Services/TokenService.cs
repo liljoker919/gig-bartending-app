@@ -8,6 +8,9 @@ namespace GigBartending.Api.Services;
 
 public class TokenService
 {
+    public const string DevOnlyDefaultSecret =
+        "dev-only-secret-change-in-production-use-minimum-64-characters-for-better-security";
+
     private readonly string _secret;
     private readonly string _issuer;
     private readonly string _audience;
@@ -15,10 +18,10 @@ public class TokenService
 
     public TokenService(IConfiguration configuration)
     {
-        // Dev-only fallbacks so `dotnet run` works without exporting env vars manually.
-        // Never rely on these defaults outside local development.
+        // Dev-only fallback so `dotnet run` works without exporting env vars manually.
+        // Never rely on this default outside local development.
         _secret = Environment.GetEnvironmentVariable("JWT_SECRET")
-            ?? "dev-only-secret-change-in-production-use-minimum-64-characters-for-better-security";
+            ?? DevOnlyDefaultSecret;
         _issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "GigBartendingApp";
         _audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "GigBartendingApp";
         _expiryMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES"), out var minutes)
