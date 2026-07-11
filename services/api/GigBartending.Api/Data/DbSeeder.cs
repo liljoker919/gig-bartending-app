@@ -8,8 +8,7 @@ public static class DbSeeder
 {
     public static async Task SeedDataAsync(GigBartendingDbContext context, UserManager<ApplicationUser> userManager)
     {
-        // Check if data already exists in either Identity users or Legacy users
-        if (context.Users.Any() || context.LegacyUsers.Any())
+        if (context.Users.Any())
         {
             Console.WriteLine("Database already contains data. Skipping seed.");
             return;
@@ -17,7 +16,6 @@ public static class DbSeeder
 
         Console.WriteLine("Seeding database...");
 
-        // Create sample users with Identity
         var bartender1 = new ApplicationUser
         {
             UserName = "bartender@example.com",
@@ -90,66 +88,6 @@ public static class DbSeeder
             Console.WriteLine($"Failed to create venue2: {string.Join(", ", venue2Result.Errors.Select(e => e.Description))}");
         }
 
-        // Also create corresponding legacy User records for backward compatibility with Shifts
-        // Get the password hasher to hash passwords properly
-        var passwordHasher = new PasswordHasher<ApplicationUser>();
-        
-        var legacyUsers = new List<User>
-        {
-            new User
-            {
-                Email = "bartender@example.com",
-                PasswordHash = passwordHasher.HashPassword(bartender1, "Password123!"),
-                Role = "Bartender",
-                FirstName = "John",
-                LastName = "Smith",
-                PhoneNumber = "555-0101",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new User
-            {
-                Email = "jane.bartender@example.com",
-                PasswordHash = passwordHasher.HashPassword(bartender2, "Password456!"),
-                Role = "Bartender",
-                FirstName = "Jane",
-                LastName = "Doe",
-                PhoneNumber = "555-0102",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new User
-            {
-                Email = "venue@example.com",
-                PasswordHash = passwordHasher.HashPassword(venue1, "Password789!"),
-                Role = "Venue",
-                FirstName = "The Grand",
-                LastName = "Hotel",
-                PhoneNumber = "555-0201",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new User
-            {
-                Email = "downtown.venue@example.com",
-                PasswordHash = passwordHasher.HashPassword(venue2, "Password123!"),
-                Role = "Venue",
-                FirstName = "Downtown",
-                LastName = "Bar & Grill",
-                PhoneNumber = "555-0202",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            }
-        };
-
-        context.LegacyUsers.AddRange(legacyUsers);
-        context.SaveChanges();
-
-        // Get the venue IDs from the saved legacy users
-        var venue1Legacy = legacyUsers.First(u => u.Email == "venue@example.com");
-        var venue2Legacy = legacyUsers.First(u => u.Email == "downtown.venue@example.com");
-
-        // Create sample shifts
         var shifts = new List<Shift>
         {
             new Shift
@@ -162,7 +100,7 @@ public static class DbSeeder
                 HourlyRate = 25.00m,
                 Location = "The Grand Hotel, 123 Main St",
                 Status = "Open",
-                VenueId = venue1Legacy.Id,
+                VenueId = venue1.Id,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -176,7 +114,7 @@ public static class DbSeeder
                 HourlyRate = 22.00m,
                 Location = "Downtown Bar & Grill, 456 Oak Ave",
                 Status = "Open",
-                VenueId = venue2Legacy.Id,
+                VenueId = venue2.Id,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -190,7 +128,7 @@ public static class DbSeeder
                 HourlyRate = 20.00m,
                 Location = "The Grand Hotel, 123 Main St",
                 Status = "Open",
-                VenueId = venue1Legacy.Id,
+                VenueId = venue1.Id,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -204,7 +142,7 @@ public static class DbSeeder
                 HourlyRate = 30.00m,
                 Location = "Downtown Bar & Grill, 456 Oak Ave",
                 Status = "Open",
-                VenueId = venue2Legacy.Id,
+                VenueId = venue2.Id,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
@@ -214,6 +152,6 @@ public static class DbSeeder
         context.SaveChanges();
 
         var identityUserCount = await userManager.Users.CountAsync();
-        Console.WriteLine($"Seeded {identityUserCount} identity users, {context.LegacyUsers.Count()} legacy users, and {context.Shifts.Count()} shifts.");
+        Console.WriteLine($"Seeded {identityUserCount} users and {context.Shifts.Count()} shifts.");
     }
 }

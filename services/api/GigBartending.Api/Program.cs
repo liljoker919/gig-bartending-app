@@ -1,7 +1,11 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using GigBartending.Api.Data;
 using GigBartending.Api.Models;
+using GigBartending.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +47,56 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<GigBartendingDbContext>()
 .AddDefaultTokenProviders();
 
+// Add JWT authentication
+builder.Services.AddSingleton<TokenService>();
+var tokenService = new TokenService(builder.Configuration);
+
+// Refuse to start outside local development if JWT_SECRET is missing or still
+// the dev-only fallback - that fallback must never sign tokens for real traffic.
+if (!builder.Environment.IsDevelopment() && tokenService.Secret == TokenService.DevOnlyDefaultSecret)
+{
+    throw new InvalidOperationException(
+        "JWT_SECRET must be set to a unique value when ASPNETCORE_ENVIRONMENT is not Development.");
+}
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = tokenService.Issuer,
+        ValidAudience = tokenService.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenService.Secret))
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// Add CORS - allowed origins come from CORS_ALLOWED_ORIGINS (comma-separated),
+// falling back to the default local dev ports for web (Vite) and mobile (Expo).
+var corsOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
+    ?? "http://localhost:5173,http://localhost:19006")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins(corsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Check for seed-only mode
@@ -76,6 +130,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -11,9 +11,8 @@ public class GigBartendingDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
-    // Legacy user table for backward compatibility
-    public DbSet<User> LegacyUsers { get; set; }
     public DbSet<Shift> Shifts { get; set; }
+    public DbSet<ShiftRequest> ShiftRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,21 +28,6 @@ public class GigBartendingDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(u => u.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
 
-        // Configure User entity (legacy/backward compatibility)
-        modelBuilder.Entity<User>(entity =>
-        {
-            entity.HasKey(u => u.Id);
-            entity.Property(u => u.Email).IsRequired().HasMaxLength(255);
-            entity.HasIndex(u => u.Email).IsUnique();
-            entity.Property(u => u.PasswordHash).IsRequired();
-            entity.Property(u => u.Role).IsRequired().HasMaxLength(50);
-            entity.Property(u => u.FirstName).HasMaxLength(100);
-            entity.Property(u => u.LastName).HasMaxLength(100);
-            entity.Property(u => u.PhoneNumber).HasMaxLength(20);
-            entity.Property(u => u.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-            entity.Property(u => u.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
-        });
-
         // Configure Shift entity
         modelBuilder.Entity<Shift>(entity =>
         {
@@ -55,10 +39,36 @@ public class GigBartendingDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(s => s.HourlyRate).HasColumnType("decimal(18,2)");
             entity.Property(s => s.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             entity.Property(s => s.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
-            
+
             entity.HasOne(s => s.Venue)
-                .WithMany(u => u.Shifts)
+                .WithMany(u => u.PostedShifts)
                 .HasForeignKey(s => s.VenueId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.AcceptedByUser)
+                .WithMany(u => u.AcceptedShifts)
+                .HasForeignKey(s => s.AcceptedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure ShiftRequest entity
+        modelBuilder.Entity<ShiftRequest>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Status).IsRequired().HasMaxLength(50);
+            entity.Property(r => r.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(r => r.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(r => new { r.ShiftId, r.BartenderId }).IsUnique();
+
+            entity.HasOne(r => r.Shift)
+                .WithMany(s => s.Requests)
+                .HasForeignKey(r => r.ShiftId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Bartender)
+                .WithMany(u => u.ShiftRequests)
+                .HasForeignKey(r => r.BartenderId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

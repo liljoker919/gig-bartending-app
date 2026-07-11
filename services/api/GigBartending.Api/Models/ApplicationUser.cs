@@ -9,6 +9,8 @@ public class ApplicationUser : IdentityUser
     public string? LastName { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
-    public ICollection<Shift>? Shifts { get; set; }
+
+    public ICollection<Shift>? PostedShifts { get; set; }
+    public ICollection<Shift>? AcceptedShifts { get; set; }
+    public ICollection<ShiftRequest>? ShiftRequests { get; set; }
 }
